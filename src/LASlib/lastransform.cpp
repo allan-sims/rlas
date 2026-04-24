@@ -1171,7 +1171,7 @@ class LASoperationSetClassification : public LASoperation
 public:
   inline const CHAR* name() const { return "set_classification"; };
   inline I32 get_command(CHAR* string) const { return snprintf(string, 256, "-%s %d ", name(), classification); };
-  inline void transform(LASpoint* point) { point->set_extended_classification(classification); };
+  inline void transform(LASpoint* point) { point->set_classification(classification); };
   LASoperationSetClassification(U8 classification) { this->classification = classification; };
 private:
   U8 classification;
@@ -1186,14 +1186,14 @@ public:
   inline void transform(LASpoint* point) {
     if (class_from > 31)
     {
-      if (point->get_extended_classification() == class_from)
+      if (point->extended_classification == class_from)
       {
-        point->set_extended_classification(class_to);
+        point->set_classification(class_to);
       }
     }
     else if (point->get_classification() == class_from)
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationChangeClassificationFromTo(U8 class_from, U8 class_to) { this->class_from = class_from; this->class_to = class_to; };
@@ -1211,7 +1211,7 @@ public:
   inline void transform(LASpoint* point) {
     if (point->get_withheld_flag() || point->get_keypoint_flag() || point->get_synthetic_flag())
     {
-      point->set_extended_classification((point->get_withheld_flag() ? 128 : 0) | (point->get_keypoint_flag() ? 64 : 0) | (point->get_synthetic_flag() ? 32 : 0) | point->get_classification());
+      point->set_classification((point->get_withheld_flag() ? 128 : 0) | (point->get_keypoint_flag() ? 64 : 0) | (point->get_synthetic_flag() ? 32 : 0) | point->get_classification());
       point->set_synthetic_flag(0);
       point->set_keypoint_flag(0);
       point->set_withheld_flag(0);
@@ -1229,7 +1229,7 @@ public:
   inline void transform(LASpoint* point) {
     if (point->get_z() < z_below)
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyZbelowAs(F64 z_below, U8 class_to) { this->z_below = z_below; this->class_to = class_to; };
@@ -1247,7 +1247,7 @@ public:
   inline void transform(LASpoint* point) {
     if (point->get_z() > z_above)
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyZaboveAs(F64 z_above, U8 class_to) { this->z_above = z_above; this->class_to = class_to; };
@@ -1265,7 +1265,7 @@ public:
   inline void transform(LASpoint* point) {
     if ((z_below <= point->get_z()) && (point->get_z() <= z_above))
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyZbetweenAs(F64 z_below, F64 z_above, U8 class_to) { this->z_below = z_below; this->z_above = z_above; this->class_to = class_to; };
@@ -1284,7 +1284,7 @@ public:
   inline void transform(LASpoint* point) {
     if (point->get_intensity() < intensity_below)
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyIntensityBelowAs(U16 intensity_below, U8 class_to) { this->intensity_below = intensity_below; this->class_to = class_to; };
@@ -1302,7 +1302,7 @@ public:
   inline void transform(LASpoint* point) {
     if (point->get_intensity() > intensity_above)
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyIntensityAboveAs(U16 intensity_above, U8 class_to) { this->intensity_above = intensity_above; this->class_to = class_to; };
@@ -1320,7 +1320,7 @@ public:
   inline void transform(LASpoint* point) {
     if ((intensity_below <= point->get_intensity()) && (point->get_intensity() <= intensity_above))
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyIntensityBetweenAs(U16 intensity_below, U16 intensity_above, U8 class_to) { this->intensity_below = intensity_below; this->intensity_above = intensity_above; this->class_to = class_to; };
@@ -1339,7 +1339,7 @@ public:
   inline void transform(LASpoint* point) {
     if (point->get_attribute_as_float(index) < below)
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyAttributeBelowAs(U32 index, F64 below, U8 class_to) { this->index = index; this->below = below; this->class_to = class_to; };
@@ -1358,7 +1358,7 @@ public:
   inline void transform(LASpoint* point) {
     if (point->get_attribute_as_float(index) > above)
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyAttributeAboveAs(U32 index, F64 above, U8 class_to) { this->index = index; this->above = above; this->class_to = class_to; };
@@ -1378,7 +1378,7 @@ public:
     F64 value = point->get_attribute_as_float(index);
     if ((below <= value) && (value <= above))
     {
-      point->set_extended_classification(class_to);
+      point->set_classification(class_to);
     }
   };
   LASoperationClassifyAttributeBetweenAs(U32 index, F64 z_below, F64 z_above, U8 class_to) { this->index = index; this->below = z_below; this->above = z_above; this->class_to = class_to; };
@@ -1561,7 +1561,7 @@ public:
   inline const CHAR* name() const { return "copy_classification_into_user_data"; };
   inline I32 get_command(CHAR* string) const { return snprintf(string, 256, "-%s ", name()); };
   inline U32 get_decompress_selective() const { return LASZIP_DECOMPRESS_SELECTIVE_CLASSIFICATION; };
-  inline void transform(LASpoint* point) { point->set_user_data(point->get_classification() ? point->get_classification() : point->get_extended_classification()); };
+  inline void transform(LASpoint* point) { point->set_user_data(point->get_classification() ? point->get_classification() : point->extended_classification); };
 };
 
 class LASoperationCopyUserDataIntoClassification : public LASoperation
@@ -1570,7 +1570,7 @@ public:
   inline const CHAR* name() const { return "copy_user_data_into_classification"; };
   inline I32 get_command(CHAR* string) const { return snprintf(string, 256, "-%s ", name()); };
   inline U32 get_decompress_selective() const { return LASZIP_DECOMPRESS_SELECTIVE_USER_DATA; };
-  inline void transform(LASpoint* point) { if (point->is_extended_point_type()) point->set_extended_classification(point->get_user_data()); else point->set_classification(point->get_user_data()); };
+  inline void transform(LASpoint* point) { if (point->extended_point_type) point->set_classification(point->get_user_data()); else point->set_classification(point->get_user_data()); };
 };
 
 class LASoperationCopyClassificationIntoPointSource : public LASoperation
@@ -1579,7 +1579,7 @@ public:
   inline const CHAR* name() const { return "copy_classification_into_point_source"; };
   inline I32 get_command(CHAR* string) const { return snprintf(string, 256, "-%s ", name()); };
   inline U32 get_decompress_selective() const { return LASZIP_DECOMPRESS_SELECTIVE_CLASSIFICATION; };
-  inline void transform(LASpoint* point) { point->set_point_source_ID(point->get_classification() ? point->get_classification() : point->get_extended_classification()); };
+  inline void transform(LASpoint* point) { point->set_point_source_ID(point->get_classification() ? point->get_classification() : point->extended_classification); };
 };
 
 class LASoperationCopyAttributeIntoUserData : public LASoperation
@@ -1900,7 +1900,7 @@ public:
   inline const CHAR* name() const { return "set_RGB_of_class"; };
   inline I32 get_command(CHAR* string) const { return snprintf(string, 256, "-%s %d %d %d %d ", name(), c, RGB[0], RGB[1], RGB[2]); };
   inline U32 get_decompress_selective() const { return LASZIP_DECOMPRESS_SELECTIVE_CLASSIFICATION; };
-  inline void transform(LASpoint* point) { if (point->get_extended_classification() == c) point->set_RGB(RGB); };
+  inline void transform(LASpoint* point) { if (point->extended_classification == c) point->set_RGB(RGB); };
   LASoperationSetRGBofExtendedClass(U8 c, U16 R, U16 G, U16 B) { this->c = c; RGB[0] = R; RGB[1] = G; RGB[2] = B; };
 private:
   U8 c;

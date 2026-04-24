@@ -9,14 +9,14 @@
 
   PROGRAMMERS:
 
-    martin.isenburg@rapidlasso.com  -  http://rapidlasso.com
+    info@rapidlasso.de  -  https://rapidlasso.de
 
   COPYRIGHT:
 
-    (c) 2007-2019, martin isenburg, rapidlasso - fast tools to catch reality
+    (c) 2007-2022, rapidlasso GmbH - fast tools to catch reality
 
     This is free software; you can redistribute and/or modify it under the
-    terms of the GNU Lesser General Licence as published by the Free Software
+    terms of the Apache Public License 2.0 published by the Apache Software
     Foundation. See the COPYING file for more information.
 
     This software is distributed WITHOUT ANY WARRANTY and without even the
@@ -31,12 +31,16 @@
 #include "laszip.hpp"
 
 #include "mydefs.hpp"
+#include "lasmessage.hpp"
 
-#include <assert.h>
+#include <cassert>
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 LASzip::LASzip()
 {
@@ -63,12 +67,12 @@ LASzip::~LASzip()
 }
 
 // the data of the LASzip VLR
-//     U16  compressor         2 bytes
-//     U16  coder              2 bytes
-//     U8   version_major      1 byte
+//     U16  compressor         2 bytes 
+//     U16  coder              2 bytes 
+//     U8   version_major      1 byte 
 //     U8   version_minor      1 byte
 //     U16  version_revision   2 bytes
-//     U32  options            4 bytes
+//     U32  options            4 bytes 
 //     U32  chunk_size         4 bytes
 //     I64  num_points         8 bytes
 //     I64  num_bytes          8 bytes
@@ -83,7 +87,7 @@ bool LASzip::unpack(const U8* bytes, const I32 num)
 {
   // check input
   if (num < 34) return return_error("too few bytes to unpack");
-  if (((num - 34) % 6) != 0) return return_error("wrong number bytes to unpack");
+  if (((num - 34) % 6) != 0) return return_error("wrong number bytes to unpack"); 
   if (((num - 34) / 6) == 0) return return_error("zero items to unpack");
   num_items = (num - 34) / 6;
 
@@ -94,33 +98,33 @@ bool LASzip::unpack(const U8* bytes, const I32 num)
   // do the unpacking
   U16 i;
   const U8* b = bytes;
-  compressor = *((U16*)b);
+  compressor = *((const U16*)b);
   b += 2;
-  coder = *((U16*)b);
+  coder = *((const U16*)b);
   b += 2;
-  version_major = *((U8*)b);
+  version_major = *((const U8*)b);
   b += 1;
-  version_minor = *((U8*)b);
+  version_minor = *((const U8*)b);
   b += 1;
-  version_revision = *((U16*)b);
+  version_revision = *((const U16*)b);
   b += 2;
-  options = *((U32*)b);
+  options = *((const U32*)b);
   b += 4;
-  chunk_size = *((U32*)b);
+  chunk_size = *((const U32*)b);
   b += 4;
-  number_of_special_evlrs = *((I64*)b);
+  number_of_special_evlrs = *((const I64*)b);
   b += 8;
-  offset_to_special_evlrs = *((I64*)b);
+  offset_to_special_evlrs = *((const I64*)b);
   b += 8;
-  num_items = *((U16*)b);
+  num_items = *((const U16*)b);
   b += 2;
   for (i = 0; i < num_items; i++)
   {
-    items[i].type = (LASitem::Type)*((U16*)b);
+    items[i].type = (LASitem::Type)*((const U16*)b);
     b += 2;
-    items[i].size = *((U16*)b);
+    items[i].size = *((const U16*)b);
     b += 2;
-    items[i].version = *((U16*)b);
+    items[i].version = *((const U16*)b);
     b += 2;
   }
   assert((bytes + num) == b);
@@ -196,7 +200,7 @@ bool LASzip::return_error(const char* error)
 #define CopyString strdup
 #endif
   char err[256];
-  snprintf(err, 256, "%s (LASzip v%d.%dr%d)", error, LASZIP_VERSION_MAJOR, LASZIP_VERSION_MINOR, LASZIP_VERSION_REVISION);
+  snprintf(err, sizeof(err), "%s (LASzip v%d.%dr%d)", error, LASZIP_VERSION_MAJOR, LASZIP_VERSION_MINOR, LASZIP_VERSION_REVISION);
   if (error_string) free(error_string);
   error_string = CopyString(err);
   return false;
@@ -206,7 +210,7 @@ bool LASzip::check_compressor(const U16 compressor)
 {
   if (compressor < LASZIP_COMPRESSOR_TOTAL_NUMBER_OF) return true;
   char error[64];
-  snprintf(error, 64, "compressor %d not supported", compressor);
+  snprintf(error, sizeof(error), "compressor %d not supported", compressor);
   return return_error(error);
 }
 
@@ -214,7 +218,7 @@ bool LASzip::check_coder(const U16 coder)
 {
   if (coder < LASZIP_CODER_TOTAL_NUMBER_OF) return true;
   char error[64];
-  snprintf(error, 64, "coder %d not supported", coder);
+  snprintf(error, sizeof(error), "coder %d not supported", coder);
   return return_error(error);
 }
 
@@ -266,7 +270,7 @@ bool LASzip::check_item(const LASitem* item)
     if (1)
     {
       char error[64];
-      snprintf(error, 64, "item unknown (%d,%d,%d)", item->type, item->size, item->version);
+      snprintf(error, sizeof(error), "item unknown (%d,%d,%d)", item->type, item->size, item->version);
       return return_error(error);
     }
   }
@@ -287,7 +291,7 @@ bool LASzip::check_items(const U16 num_items, const LASitem* items, const U16 po
   if (point_size && (point_size != size))
   {
     CHAR temp[66];
-    snprintf(temp, 66, "point has size of %d but items only add up to %d bytes", point_size, size);
+    snprintf(temp, sizeof(temp), "point has size of %d but items only add up to %d bytes", point_size, size);
     return return_error(temp);
   }
   return true;
@@ -424,7 +428,7 @@ bool LASzip::setup(U16* num_items, LASitem** items, const U8 point_type, const U
   BOOL have_wavepacket = FALSE;
   I32 extra_bytes_number = 0;
 
-  // turns on LAS 1.4 compatibility mode
+  // turns on LAS 1.4 compatibility mode 
 
   if (options & 1) compatible = TRUE;
 
@@ -489,14 +493,14 @@ bool LASzip::setup(U16* num_items, LASitem** items, const U8 point_type, const U
     if (1)
     {
       char error[64];
-      snprintf(error, 64, "point type %d unknown", point_type);
+      snprintf(error, sizeof(error), "point type %d unknown", point_type);
       return return_error(error);
     }
   }
 
   if (extra_bytes_number < 0)
   {
-    REprintf( "WARNING: point size %d too small by %d bytes for point type %d. assuming point_size of %d\n", point_size, -extra_bytes_number, point_type, point_size-extra_bytes_number);
+    LASMessage(LAS_WARNING, "point size %d too small by %d bytes for point type %d. assuming point_size of %d", point_size, -extra_bytes_number, point_type, point_size-extra_bytes_number);
     extra_bytes_number = 0;
   }
 
@@ -512,7 +516,7 @@ bool LASzip::setup(U16* num_items, LASitem** items, const U8 point_type, const U
     // if we have NIR ...
     if (have_nir)
     {
-      // we need another 2 extra bytes
+      // we need another 2 extra bytes 
       extra_bytes_number += 2;
       // we do not use the NIR item
       have_nir = FALSE;
@@ -617,6 +621,38 @@ bool LASzip::set_chunk_size(const U32 chunk_size)
   return false;
 }
 
+// returns the default value for "requested version" depending on point type and las version
+// makes version 4 the default version for las 1.5
+// shall be used to call LASzip::request_version()
+unsigned short LASzip::get_default_version(const unsigned char point_type, const unsigned char las_version_major, const unsigned char las_version_minor)
+{
+    if ((point_type & 63) <= 5) {
+        return 2;
+    }
+    else if (((point_type & 63) >= 6) && ((point_type & 63) <= 10)) {
+        if ((las_version_major >= 1) && (las_version_minor >= 5)) {
+            return 4;
+        }
+        else {
+            return 3;
+        }
+    }
+    else {
+        return 2;  // fall back
+    }
+}
+
+// 0: no compression, invalid value if compression is used
+// 1: legacy version for point types 0-5
+// 2: default version for point types 0-5
+// 3: default version for point types 6-10
+// 4: new, slightly fixed version for point types 6-10 (not default yet, until software versions are widely updated)
+// >=5: invalid
+
+// specifying value 3 or 4 for point types 0-5 will use version 2
+// specifying value 1 or 2 for point types 6-10 will use version 3
+// WAVEPACKET13 always uses version 1 
+
 bool LASzip::request_version(const U16 requested_version)
 {
   if (num_items == 0) return return_error("call setup() before requesting version");
@@ -627,7 +663,7 @@ bool LASzip::request_version(const U16 requested_version)
   else
   {
     if (requested_version < 1) return return_error("with compression version is at least 1");
-    if (requested_version > 2) return return_error("version larger than 2 not supported");
+    if (requested_version > 4) return return_error("version larger than 4 not supported");
   }
   U16 i;
   for (i = 0; i < num_items; i++)
@@ -638,17 +674,17 @@ bool LASzip::request_version(const U16 requested_version)
     case LASitem::GPSTIME11:
     case LASitem::RGB12:
     case LASitem::BYTE:
-      items[i].version = requested_version;
+      items[i].version = (std::min)((U16)2, requested_version);  // no version 3 or 4
       break;
     case LASitem::WAVEPACKET13:
-      items[i].version = 1; // no version 2
+      items[i].version = 1; // no version 2, 3 or 4
       break;
     case LASitem::POINT14:
     case LASitem::RGB14:
     case LASitem::RGBNIR14:
     case LASitem::WAVEPACKET14:
     case LASitem::BYTE14:
-      items[i].version = 3; // no version 1 or 2
+      items[i].version = (std::max)((U16)3, requested_version);  // no version 1 or 2
       break;
     default:
       return return_error("item type not supported");
@@ -754,7 +790,7 @@ bool LASzip::is_standard(const U16 num_items, const LASitem* items, U8* point_ty
               if (record_length) assert(*record_length == 57);
               return true;
             }
-            else
+            else 
             {
               if (items[3].is_type(LASitem::BYTE))
               {
@@ -860,7 +896,7 @@ bool LASzip::is_standard(const U16 num_items, const LASitem* items, U8* point_ty
               if (record_length) assert(*record_length == 67);
               return true;
             }
-            else
+            else 
             {
               if (items[3].is_type(LASitem::BYTE) || items[3].is_type(LASitem::BYTE14))
               {

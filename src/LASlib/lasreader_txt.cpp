@@ -1755,18 +1755,18 @@ BOOL LASreaderTXT::parse(const char* parse_string)
 			{
 				REprintf("WARNING: classification %d is negative. zeroing ...\n", temp_i);
 				point.set_classification(0);
-				point.set_extended_classification(0);
+				point.set_classification(0);
 			}
 			else if (point.extended_point_type)
 			{
 				if (temp_i > 255)
 				{
 					REprintf("WARNING: extended classification %d is larger than 255. clamping ...\n", temp_i);
-					point.set_extended_classification(255);
+					point.set_classification(255);
 				}
 				else
 				{
-					point.set_extended_classification((U8)temp_i);
+					point.set_classification((U8)temp_i);
 				}
 			}
 			else

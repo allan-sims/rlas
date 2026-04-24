@@ -88,7 +88,7 @@ BOOL LASwriterLAS::open(const char* file_name, const LASheader* header, U32 comp
   }
 
   ByteStreamOut* out;
-  if (IS_LITTLE_ENDIAN())
+  if (Endian::IS_LITTLE_ENDIAN)
     out = new ByteStreamOutFileLE(file);
   else
     out = new ByteStreamOutFileBE(file);
@@ -115,7 +115,7 @@ BOOL LASwriterLAS::open(FILE* file, const LASheader* header, U32 compressor, I32
 #endif
 
   ByteStreamOut* out;
-  if (IS_LITTLE_ENDIAN())
+  if (Endian::IS_LITTLE_ENDIAN)
     out = new ByteStreamOutFileLE(file);
   else
     out = new ByteStreamOutFileBE(file);
@@ -126,7 +126,7 @@ BOOL LASwriterLAS::open(FILE* file, const LASheader* header, U32 compressor, I32
 BOOL LASwriterLAS::open(ostream& stream, const LASheader* header, U32 compressor, I32 requested_version, I32 chunk_size)
 {
   ByteStreamOut* out;
-  if (IS_LITTLE_ENDIAN())
+  if (Endian::IS_LITTLE_ENDIAN)
     out = new ByteStreamOutOstreamLE(stream);
   else
     out = new ByteStreamOutOstreamBE(stream);

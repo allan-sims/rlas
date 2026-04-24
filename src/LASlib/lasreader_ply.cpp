@@ -1138,7 +1138,7 @@ BOOL LASreaderPLY::read_binary_point()
       if (point_type > 5)
       {
         if ((value < 0) || (value > 255)) REprintf( "WARNING: classification %g is out of range of eight bits\n", value);
-        point.set_extended_classification(U8_QUANTIZE(value));
+        point.set_classification(U8_QUANTIZE(value));
       }
       else
       {

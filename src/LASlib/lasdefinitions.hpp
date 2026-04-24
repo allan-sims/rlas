@@ -333,6 +333,11 @@ public:
     x_scale_factor = 0.01;
     y_scale_factor = 0.01;
     z_scale_factor = 0.01;
+    // rlas patch: memset above zeroes the inherited LASquantizer::z_from_attrib
+    // field. 3.5.0's LASpoint::get_Z() treats values >= 0 as "read Z from the
+    // n-th extra byte attribute", so a zeroed field makes every Z come back as
+    // 0. Restore the -1 sentinel that LASquantizer() would have set.
+    z_from_attrib = -1;
   };
 
   void clean_user_data_in_header()
