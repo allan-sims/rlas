@@ -1,3 +1,15 @@
+### rlas v1.9.0
+
+- LASzip upgraded from 3.4.3 to 3.5.0. Upstream changes include
+  the relicensing of LASzip to Apache 2.0, the new `LASMessage` logging
+  infrastructure, the unified `get/set_classification` API, and
+  groundwork for LAS 1.5. rlas-side compatibility patches are captured in
+  `laslib2R.sh`.
+- Fix: a latent bug in `LASheader::clean_las_header()` zeroed the
+  inherited `LASquantizer::z_from_attrib` field, which 3.5.0 interprets
+  as "read Z from extra byte 0" and would cause every Z value to come
+  back as zero. The field is now reset to `-1` after the memset.
+
 ### rlas v1.8.5
 
 - Fix CRAN stuff
