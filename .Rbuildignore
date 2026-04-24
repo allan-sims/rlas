@@ -10,3 +10,6 @@
 ^\.github$
 ^CRAN-RELEASE$
 ^CRAN-SUBMISSION$
+^CLAUDE\.md$
+^LASzip-3\.5\.0$
+^\.claude$

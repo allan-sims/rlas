@@ -93,7 +93,7 @@ void laxwriter(CharacterVector file, bool verbose)
     lasreader->close();
     delete lasreader;
 
-    lasindex.complete(100000, -20, verbose);
+    lasindex.complete(100000, -20);
     lasindex.write(lasreadopener.get_file_name());
 
     return;

@@ -8,6 +8,10 @@
 files=`grep -lr "fprintf" src/`
 perl -pi -w -e 's/fprintf\(stderr,/REprintf(/g;' $files
 
+# 2025 upgrade to LASzip 3.5.0 introduced std::fprintf(stderr, ...) calls too
+files=`grep -lr "std::fprintf" src/`
+perl -pi -w -e 's/std::fprintf\(stderr,/REprintf(/g;' $files
+
 files=`grep -lr "exit(1)" src/`
 perl -pi -w -e 's/exit\(1\)/throw std::runtime_error\("Internal error"\)/g;' $files
 
@@ -40,6 +44,46 @@ sed -i 's/sprintf(temp/snprintf(temp, 32/g' src/LASlib/lasreader_txt.cpp
 # No longer use __int64 windows type for I64. Instead in mydefs.hpp use long long on winwdows
 sed -i 's/%I64d/%lld/g' src/*/*.[ch]pp
 
+# 2025 nov upgrade to LASzip 3.5.0
+# ================================
+# R-integration patch: inject `#define STRICT_R_HEADERS` + `#include <R.h>` and
+# `#define __STDC_FORMAT_MACROS 1` + `#include <inttypes.h>` into mydefs.hpp.
+# REprintf (used in place of fprintf(stderr, ...)) needs R.h. inttypes.h is
+# needed because 3.5.0 dropped it from mydefs.hpp but LASlib's lasreader_txt.cpp
+# etc. still use PRId64. Guard with grep so injection is idempotent.
+if ! grep -q "STRICT_R_HEADERS" src/LASzip/mydefs.hpp; then
+  sed -i '/^#define MYDEFS_HPP$/a\
+#define STRICT_R_HEADERS\
+#include <R.h>\
+#define __STDC_FORMAT_MACROS 1\
+#include <inttypes.h>' src/LASzip/mydefs.hpp
+fi
+
+# LASzip 3.5.0 renamed `set_extended_classification` to the unified
+# `set_classification` on LASpoint. Old LASlib sources still call the former.
+sed -i 's/set_extended_classification(/set_classification(/g' \
+  src/LASlib/lasreader_ply.cpp \
+  src/LASlib/lasreader_txt.cpp \
+  src/LASlib/lastransform.cpp
+
+# LASzip 3.5.0 moved IS_LITTLE_ENDIAN() (macro) to Endian::IS_LITTLE_ENDIAN
+# (const bool in the Endian namespace). Old LASlib sources call it as a function.
+sed -i 's/IS_LITTLE_ENDIAN()/Endian::IS_LITTLE_ENDIAN/g' \
+  src/LASlib/*.cpp src/LASlib/*.hpp
+
+# LASzip 3.5.0 dropped LASpoint::get_extended_classification() and
+# LASpoint::is_extended_point_type() as methods. The fields are still there, so
+# rewrite the call sites to access the fields directly.
+sed -i 's/get_extended_classification()/extended_classification/g; s/is_extended_point_type()/extended_point_type/g' \
+  src/LASlib/*.cpp src/LASlib/*.hpp
+
+# LASzip 3.5.0 renamed the in-place endian-swap helpers by appending an
+# underscore (ENDIAN_SWAP_16 -> ENDIAN_SWAP_16_, etc.) because the non-underscore
+# name is now a two-argument copy-with-swap variant. All LASlib call sites use
+# the single-argument in-place form, so rename them all.
+sed -i 's/ENDIAN_SWAP_16(/ENDIAN_SWAP_16_(/g; s/ENDIAN_SWAP_32(/ENDIAN_SWAP_32_(/g; s/ENDIAN_SWAP_64(/ENDIAN_SWAP_64_(/g' \
+  src/LASlib/*.cpp src/LASlib/*.hpp
+
 # occurences in laszip.dll must be done by hand (easy)
 # some remaining occurencesdone by hand in lasfilter.cpp
 # two occurences done by hand in lasreader.cpp
@@ -54,7 +98,7 @@ sed -i 's/%I64d/%lld/g' src/*/*.[ch]pp
 # Compile with g++7 and -flto -Wlto-type-mismatch -Wodr -Wall -pedantic -mtune=native -Wno-ignored-attributes -Wno-deprecated-declarations -Wno-parentheses
 
 # fopen_compressed.cpp                #include <R.h> and #define STRICT_R_HEADERS
-# mydefs.hpp                          #include <R.h> and #define STRICT_R_HEADERS
+# mydefs.hpp                          #include <R.h> and #define STRICT_R_HEADERS (now automated above)
 # lasreaderpipeon.cpp      l96-101    comment lines because of stdout
 # laswriter.cpp            l139-204   comment lines because of stdout (I guess)
 
@@ -83,6 +127,36 @@ sed -i 's/%I64d/%lld/g' src/*/*.[ch]pp
 # lasreader_ply.cpp        l1485 1503 I32 -> U32
 # Fix various -Wempty-body caused by if(fget(...)); with clang++
 # CRAN is happy now!
+
+# 2025 upgrade to LASzip 3.5.0 manual patches:
+# mydefs.cpp               byebye()    stdin/exit(code) removed for R integration;
+#                                      replaced exit(code) with throw std::runtime_error(...)
+#                                      (stdin getc also disabled).
+# lasindex.cpp             top         local #define LAS_VLR_USER_ID_CHAR_LEN 17
+#                                      because the constant lives in laszip_api.h
+#                                      (DLL-only header rlas does not copy).
+# lasindex.cpp             l590        lasreader->p_idx renamed back to p_count
+#                                      since rlas still ships 3.4.3-era LASlib.
+# laspoint.hpp             ~l780       restore inline get_extended_classification
+#                                      / set_extended_classification so
+#                                      rlasstreamer.cpp's SMART_POPULATOR macro
+#                                      and writeLAS.cpp can keep calling them
+#                                      by method name.
+# laspoint.hpp             l580,l701   drop the [[deprecated]] attributes on
+#                                      get_/set_scan_angle_rank so CRAN doesn't
+#                                      flag "significant compiler warning" for
+#                                      rlas's intentional use of the legacy
+#                                      accessor on format 1-5 points.
+# lasdefinitions.hpp       l336        clean_las_header()'s memset(this, 0)
+#                                      also zeroes LASquantizer::z_from_attrib,
+#                                      which LASpoint::get_Z() treats as
+#                                      "read Z from extra byte 0". Reset the
+#                                      field to -1 after the memset so every
+#                                      Z value doesn't come back as 0.
+# writeLAX.cpp             l96         LASindex::complete() lost its 3rd
+#                                      (verbose) parameter in 3.5.0; drop it.
+# lascopc.{cpp,hpp}                    rlas-specific files from the previous upgrade.
+#                                      Kept as-is; not part of upstream LASzip.
 
 # In addition:
 # - Tiago added the support of a new filter: see issue #32

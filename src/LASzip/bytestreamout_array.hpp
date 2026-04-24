@@ -7,14 +7,14 @@
       
   PROGRAMMERS:
   
-    martin.isenburg@rapidlasso.com  -  http://rapidlasso.com
+    info@rapidlasso.de  -  https://rapidlasso.de
   
   COPYRIGHT:
   
-    (c) 2007-2019, martin isenburg, rapidlasso - fast tools to catch reality
+    (c) 2007-2022, rapidlasso GmbH - fast tools to catch reality
 
     This is free software; you can redistribute and/or modify it under the
-    terms of the GNU Lesser General Licence as published by the Free Software
+    terms of the Apache Public License 2.0 published by the Apache Software
     Foundation. See the COPYING file for more information.
 
     This software is distributed WITHOUT ANY WARRANTY and without even the
@@ -85,7 +85,7 @@ public:
 /* write 64 bit big-endian field                             */
   BOOL put64bitsBE(const U8* bytes);
 private:
-  U8 swapped[8];
+  U8 swapped[8] = {0};
 };
 
 class ByteStreamOutArrayBE : public ByteStreamOutArray
@@ -105,12 +105,12 @@ public:
 /* write 64 bit big-endian field                             */
   BOOL put64bitsBE(const U8* bytes);
 private:
-  U8 swapped[8];
+  U8 swapped[8] = {0};
 };
 
 inline ByteStreamOutArray::ByteStreamOutArray(I64 alloc)
 {
-  this->data = (U8*)malloc((U32)alloc);
+  this->data = (U8*)malloc_las((size_t)alloc);
   this->alloc = alloc;
   this->size = 0;
   this->curr = 0;
@@ -121,7 +121,7 @@ inline BOOL ByteStreamOutArray::putByte(U8 byte)
   if (curr == alloc)
   {
     alloc += 4096;
-    data = (U8*)realloc(data, (U32)alloc);
+    data = (U8*)realloc_las(data, (U32)alloc);
     if (data == 0)
     {
       return FALSE;
@@ -138,7 +138,7 @@ inline BOOL ByteStreamOutArray::putBytes(const U8* bytes, U32 num_bytes)
   if ((curr+num_bytes) > alloc)
   {
     alloc += (4096+num_bytes);
-    data = (U8*)realloc(data, (U32)alloc);
+    data = (U8*)realloc_las(data, (U32)alloc);
     if (data == 0)
     {
       return FALSE;

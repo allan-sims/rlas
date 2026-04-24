@@ -2,30 +2,30 @@
 ===============================================================================
 
   FILE:  lasreadpoint.cpp
-
+  
   CONTENTS:
-
+  
     see corresponding header file
-
+  
   PROGRAMMERS:
 
-    martin.isenburg@rapidlasso.com  -  http://rapidlasso.com
+    info@rapidlasso.de  -  https://rapidlasso.de
 
   COPYRIGHT:
 
-    (c) 2007-2017, martin isenburg, rapidlasso - fast tools to catch reality
+    (c) 2007-2022, rapidlasso GmbH - fast tools to catch reality
 
     This is free software; you can redistribute and/or modify it under the
-    terms of the GNU Lesser General Licence as published by the Free Software
+    terms of the Apache Public License 2.0 published by the Apache Software
     Foundation. See the COPYING file for more information.
 
     This software is distributed WITHOUT ANY WARRANTY and without even the
     implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
+  
   CHANGE HISTORY:
-
+  
     see corresponding header file
-
+  
 ===============================================================================
 */
 
@@ -104,10 +104,10 @@ BOOL LASreadPoint::setup(U32 num_items, const LASitem* items, const LASzip* lasz
       // entropy decoder not supported
       return FALSE;
     }
-    // maybe layered compression for LAS 1.4
+    // maybe layered compression for LAS 1.4 
     layered_las14_compression = (laszip->compressor == LASZIP_COMPRESSOR_LAYERED_CHUNKED);
   }
-
+ 
   // initizalize the readers
   readers = 0;
   num_readers = num_items;
@@ -122,20 +122,20 @@ BOOL LASreadPoint::setup(U32 num_items, const LASitem* items, const LASzip* lasz
     switch (items[i].type)
     {
     case LASitem::POINT10:
-      if (IS_LITTLE_ENDIAN())
+      if (Endian::IS_LITTLE_ENDIAN)
         readers_raw[i] = new LASreadItemRaw_POINT10_LE();
       else
         readers_raw[i] = new LASreadItemRaw_POINT10_BE();
       break;
     case LASitem::GPSTIME11:
-      if (IS_LITTLE_ENDIAN())
+      if (Endian::IS_LITTLE_ENDIAN)
         readers_raw[i] = new LASreadItemRaw_GPSTIME11_LE();
       else
         readers_raw[i] = new LASreadItemRaw_GPSTIME11_BE();
        break;
     case LASitem::RGB12:
     case LASitem::RGB14:
-      if (IS_LITTLE_ENDIAN())
+      if (Endian::IS_LITTLE_ENDIAN)
         readers_raw[i] = new LASreadItemRaw_RGB12_LE();
       else
         readers_raw[i] = new LASreadItemRaw_RGB12_BE();
@@ -145,20 +145,20 @@ BOOL LASreadPoint::setup(U32 num_items, const LASitem* items, const LASzip* lasz
       readers_raw[i] = new LASreadItemRaw_BYTE(items[i].size);
       break;
     case LASitem::POINT14:
-      if (IS_LITTLE_ENDIAN())
+      if (Endian::IS_LITTLE_ENDIAN)
         readers_raw[i] = new LASreadItemRaw_POINT14_LE();
       else
         readers_raw[i] = new LASreadItemRaw_POINT14_BE();
       break;
     case LASitem::RGBNIR14:
-      if (IS_LITTLE_ENDIAN())
+      if (Endian::IS_LITTLE_ENDIAN)
         readers_raw[i] = new LASreadItemRaw_RGBNIR14_LE();
       else
         readers_raw[i] = new LASreadItemRaw_RGBNIR14_BE();
       break;
     case LASitem::WAVEPACKET13:
     case LASitem::WAVEPACKET14:
-      if (IS_LITTLE_ENDIAN())
+      if (Endian::IS_LITTLE_ENDIAN)
         readers_raw[i] = new LASreadItemRaw_WAVEPACKET13_LE();
       else
         readers_raw[i] = new LASreadItemRaw_WAVEPACKET13_BE();
@@ -438,7 +438,7 @@ BOOL LASreadPoint::read(U8* const * point)
           if (current_chunk >= number_chunks)
           {
             number_chunks += 256;
-            chunk_starts = (I64*)realloc(chunk_starts, sizeof(I64)*(number_chunks+1));
+            chunk_starts = (I64*)realloc_las(chunk_starts, sizeof(I64)*(number_chunks+1));
           }
           chunk_starts[tabled_chunks] = point_start; // needs fixing
           tabled_chunks++;
@@ -501,7 +501,7 @@ BOOL LASreadPoint::read(U8* const * point)
       }
     }
   }
-  catch (I32 exception)
+  catch (I32 exception) 
   {
     // create error string
     if (last_error == 0) last_error = new CHAR[128];
@@ -614,7 +614,7 @@ BOOL LASreadPoint::read_chunk_table()
     }
     // otherwise we build the chunk table as we read the file
     number_chunks = 256;
-    chunk_starts = (I64*)malloc(sizeof(I64)*(number_chunks+1));
+    chunk_starts = (I64*)malloc_las(sizeof(I64) * (number_chunks + 1));
     if (chunk_starts == 0)
     {
       return FALSE;
@@ -687,7 +687,7 @@ BOOL LASreadPoint::read_chunk_table()
       }
       chunk_totals[0] = 0;
     }
-    chunk_starts = (I64*)malloc(sizeof(I64)*(number_chunks+1));
+    chunk_starts = (I64*)malloc_las(sizeof(I64) * (number_chunks + 1));
     if (chunk_starts == 0)
     {
       throw 1;
@@ -733,7 +733,7 @@ BOOL LASreadPoint::read_chunk_table()
     {
       // then compressor was interrupted before getting a chance to write the chunk table
       number_chunks = 256;
-      chunk_starts = (I64*)malloc(sizeof(I64)*(number_chunks+1));
+      chunk_starts = (I64*)malloc_las(sizeof(I64) * (number_chunks + 1));
       if (chunk_starts == 0)
       {
         return FALSE;
@@ -743,12 +743,15 @@ BOOL LASreadPoint::read_chunk_table()
     }
     else
     {
+#pragma warning(push)
+#pragma warning(disable : 6011)
       // otherwise fix as many additional chunk_starts as possible
       U32 i;
       for (i = 1; i < tabled_chunks; i++)
       {
         chunk_starts[i] += chunk_starts[i-1];
       }
+#pragma warning(pop)
     }
     // create warning string
     if (last_warning == 0) last_warning = new CHAR[128];
@@ -766,11 +769,7 @@ BOOL LASreadPoint::read_chunk_table()
       }
       else
       {
-#ifdef _WIN32
-        snprintf(last_warning, 128, "chunk table and bytes are missing. LAZ file truncated during copy or transfer?");//, chunk_table_start_position - last_position);
-#else
-        snprintf(last_warning, 128, "chunk table and bytes are missing. LAZ file truncated during copy or transfer?");//, chunk_table_start_position - last_position);
-#endif
+        snprintf(last_warning, 128, "chunk table and %lld bytes are missing. LAZ file truncated during copy or transfer?", chunk_table_start_position - last_position);
       }
     }
     else

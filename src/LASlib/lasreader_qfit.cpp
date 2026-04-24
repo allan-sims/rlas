@@ -60,7 +60,7 @@ BOOL LASreaderQFIT::open(const char* file_name)
   // create input stream
 
   ByteStreamIn* in;
-  if (IS_LITTLE_ENDIAN())
+  if (Endian::IS_LITTLE_ENDIAN)
     in = new ByteStreamInFileLE(file);
   else
     in = new ByteStreamInFileBE(file);
@@ -144,15 +144,15 @@ BOOL LASreaderQFIT::open(ByteStreamIn* stream)
   if (version == 40 || version == 48 || version == 56)
   {
     little_endian = TRUE;
-    endian_swap = (IS_LITTLE_ENDIAN() == FALSE);
+    endian_swap = (Endian::IS_LITTLE_ENDIAN == FALSE);
   }
   else
   {
-    ENDIAN_SWAP_32((U8*)&version);
+    ENDIAN_SWAP_32_((U8*)&version);
     if (version == 40 || version == 48 || version == 56)
     {
       little_endian = FALSE;
-      endian_swap = (IS_LITTLE_ENDIAN() == TRUE);
+      endian_swap = (Endian::IS_LITTLE_ENDIAN == TRUE);
     }
     else
     {
@@ -320,24 +320,24 @@ BOOL LASreaderQFIT::read_point_default()
 
     if (endian_swap)
     {
-      ENDIAN_SWAP_32((U8*)&buffer[0]);
-      ENDIAN_SWAP_32((U8*)&buffer[1]);
-      ENDIAN_SWAP_32((U8*)&buffer[2]);
-      ENDIAN_SWAP_32((U8*)&buffer[3]);
-      ENDIAN_SWAP_32((U8*)&buffer[5]);
-      ENDIAN_SWAP_32((U8*)&buffer[6]);
-      ENDIAN_SWAP_32((U8*)&buffer[7]);
-      ENDIAN_SWAP_32((U8*)&buffer[8]);
-      ENDIAN_SWAP_32((U8*)&buffer[9]);
+      ENDIAN_SWAP_32_((U8*)&buffer[0]);
+      ENDIAN_SWAP_32_((U8*)&buffer[1]);
+      ENDIAN_SWAP_32_((U8*)&buffer[2]);
+      ENDIAN_SWAP_32_((U8*)&buffer[3]);
+      ENDIAN_SWAP_32_((U8*)&buffer[5]);
+      ENDIAN_SWAP_32_((U8*)&buffer[6]);
+      ENDIAN_SWAP_32_((U8*)&buffer[7]);
+      ENDIAN_SWAP_32_((U8*)&buffer[8]);
+      ENDIAN_SWAP_32_((U8*)&buffer[9]);
       if (version >= 48)
       {
-        ENDIAN_SWAP_32((U8*)&buffer[10]);
-        ENDIAN_SWAP_32((U8*)&buffer[11]);
+        ENDIAN_SWAP_32_((U8*)&buffer[10]);
+        ENDIAN_SWAP_32_((U8*)&buffer[11]);
       }
       if (version >= 56)
       {
-        ENDIAN_SWAP_32((U8*)&buffer[12]);
-        ENDIAN_SWAP_32((U8*)&buffer[13]);
+        ENDIAN_SWAP_32_((U8*)&buffer[12]);
+        ENDIAN_SWAP_32_((U8*)&buffer[13]);
       }
     }
 
@@ -417,7 +417,7 @@ BOOL LASreaderQFIT::reopen(const char* file_name)
 
   // create input stream
 
-  if (IS_LITTLE_ENDIAN())
+  if (Endian::IS_LITTLE_ENDIAN)
     stream = new ByteStreamInFileLE(file);
   else
     stream = new ByteStreamInFileBE(file);
