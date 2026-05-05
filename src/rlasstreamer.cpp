@@ -312,6 +312,17 @@ void RLASstreamer::allocation()
       Zt.reserve(nalloc);
     }
 
+    // Guard: Extra Bytes VLR can exist even when PDRL == base format size (malformed
+    // files from some las2las versions). In that case extra_bytes is NULL and any
+    // attempt to read attributes would segfault.
+    if (!eb.empty() && lasreader->point.extra_bytes_number == 0)
+    {
+      std::string msg = std::string("Extra Bytes VLR declares ") + std::to_string(header->number_attributes) +
+        std::string(" attribute(s) but Point Data Record Length contains no extra bytes. Extra bytes will be ignored.");
+      Rf_warningcall(R_NilValue, "%s", msg.c_str());
+      eb.clear();
+    }
+
     // Find if extra bytes are 32 of 64 bytes types
     for(size_t j = 0; j < eb.size(); j++)
     {
