@@ -73,6 +73,9 @@
 #' @param select character. select only columns of interest to save memory (see details)
 #' @param filter character. streaming filters - filter data while reading the file (see details)
 #' @param transform character. streaming transformation - transform data while reading the file (see details)
+#' @param progress logical. Display a progress bar for large files. The bar only
+#'   appears after the read has been running for more than 2 seconds, so small
+#'   files are unaffected regardless of this setting. Default \code{TRUE}.
 #' @return A \code{data.table}
 #' @export
 #' @examples
@@ -82,8 +85,9 @@
 #' lasdata <- read.las(lasfile, filter = "-keep_first")
 #' lasdata <- read.las(lasfile, filter = "-drop_intensity_below 80")
 #' lasdata <- read.las(lasfile, select = "xyzia")
+#' lasdata <- read.las(lasfile, progress = FALSE)
 #' @useDynLib rlas, .registration = TRUE
-read.las = function(files, select = "*", filter = "", transform = "")
+read.las = function(files, select = "*", filter = "", transform = "", progress = TRUE)
 {
     if (filter == "-h" | filter == "-help")
       lasfilterusage()
@@ -95,7 +99,7 @@ read.las = function(files, select = "*", filter = "", transform = "")
       return(invisible())
 
   filter = paste(filter, transform)
-  stream.las(files, select = select, filter = filter)
+  stream.las(files, select = select, filter = filter, progress = progress)
 }
 
 #' Read header from a .las or .laz file
@@ -130,7 +134,7 @@ read.lasheader = function(file)
 #' @param ifiles,ofile characters. Streaming operations.
 #' @param polygons list. Internal use only.
 #' @export
-read_and_write.las = function(ifiles, ofile = "", select = "*", filter = "", polygons = list())
+read_and_write.las = function(ifiles, ofile = "", select = "*", filter = "", polygons = list(), progress = TRUE)
 {
   stream    <- ofile != ""
   ifiles    <- enc2native(normalizePath(ifiles))
@@ -143,7 +147,7 @@ read_and_write.las = function(ifiles, ofile = "", select = "*", filter = "", pol
 
   check_filter(filter)
 
-  raw_list <- C_reader(ifiles, ofile, select, filter, polygons)
+  raw_list <- C_reader(ifiles, ofile, select, filter, polygons, progress)
 
   data <- raw_list[1:3]
   data.table::setDT(data)

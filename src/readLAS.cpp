@@ -74,7 +74,7 @@ inline void print_progress(float progress, const std::chrono::steady_clock::time
 }
 
 // [[Rcpp::export]]
-List C_reader(CharacterVector ifiles, CharacterVector ofile, CharacterVector select, CharacterVector filter, Rcpp::List polygons)
+List C_reader(CharacterVector ifiles, CharacterVector ofile, CharacterVector select, CharacterVector filter, Rcpp::List polygons, bool progress = true)
 {
   RLASstreamer streamer(ifiles, ofile, filter);
   streamer.select(select);
@@ -92,7 +92,7 @@ List C_reader(CharacterVector ifiles, CharacterVector ofile, CharacterVector sel
       if (++counter % 10000 == 0)
       {
         Rcpp::checkUserInterrupt();
-        print_progress(streamer.progress, start);
+        if (progress) print_progress(streamer.progress, start);
       }
     }
   }
@@ -142,12 +142,12 @@ List C_reader(CharacterVector ifiles, CharacterVector ofile, CharacterVector sel
       if (++counter % 10000 == 0)
       {
         Rcpp::checkUserInterrupt();
-        print_progress(streamer.progress, start);
+        if (progress) print_progress(streamer.progress, start);
       }
     }
   }
 
-  Rcpp::Rcout << "\r" << std::string(80, ' ') << "\r" << std::flush;
+  if (progress) Rcpp::Rcout << "\r" << std::string(80, ' ') << "\r" << std::flush;
 
   return streamer.terminate();
 }
