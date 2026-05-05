@@ -9,6 +9,11 @@
   inherited `LASquantizer::z_from_attrib` field, which 3.5.0 interprets
   as "read Z from extra byte 0" and would cause every Z value to come
   back as zero. The field is now reset to `-1` after the memset.
+- Fix: reading a LAS file where an Extra Bytes VLR is present but the
+  Point Data Record Length equals the base format size (no extra bytes
+  in the point data) caused a crash. This inconsistency, produced by
+  some versions of `las2las`, now triggers a warning and extra bytes are
+  silently ignored instead of dereferencing a NULL pointer.
 
 ### rlas v1.8.5
 
