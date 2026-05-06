@@ -49,6 +49,10 @@ lastransformusage <- function() {
     invisible(.Call(`_rlas_lastransformusage`))
 }
 
+C_reader_parallel <- function(ifiles, select_cv, nthreads) {
+    .Call(`_rlas_C_reader_parallel`, ifiles, select_cv, nthreads)
+}
+
 C_writer <- function(file, LASheader, data) {
     invisible(.Call(`_rlas_C_writer`, file, LASheader, data))
 }

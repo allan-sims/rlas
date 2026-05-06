@@ -147,6 +147,19 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// C_reader_parallel
+List C_reader_parallel(CharacterVector ifiles, CharacterVector select_cv, int nthreads);
+RcppExport SEXP _rlas_C_reader_parallel(SEXP ifilesSEXP, SEXP select_cvSEXP, SEXP nthreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< CharacterVector >::type ifiles(ifilesSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type select_cv(select_cvSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(C_reader_parallel(ifiles, select_cv, nthreads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // C_writer
 void C_writer(CharacterVector file, List LASheader, List data);
 RcppExport SEXP _rlas_C_writer(SEXP fileSEXP, SEXP LASheaderSEXP, SEXP dataSEXP) {
@@ -184,6 +197,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rlas_lasheaderreader", (DL_FUNC) &_rlas_lasheaderreader, 1},
     {"_rlas_lasfilterusage", (DL_FUNC) &_rlas_lasfilterusage, 0},
     {"_rlas_lastransformusage", (DL_FUNC) &_rlas_lastransformusage, 0},
+    {"_rlas_C_reader_parallel", (DL_FUNC) &_rlas_C_reader_parallel, 3},
     {"_rlas_C_writer", (DL_FUNC) &_rlas_C_writer, 3},
     {"_rlas_laxwriter", (DL_FUNC) &_rlas_laxwriter, 2},
     {NULL, NULL, 0}

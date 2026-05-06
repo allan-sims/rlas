@@ -76,6 +76,10 @@
 #' @param progress logical. Display a progress bar for large files. The bar only
 #'   appears after the read has been running for more than 2 seconds, so small
 #'   files are unaffected regardless of this setting. Default \code{TRUE}.
+#' @param nthreads integer. Number of threads for parallel reading. Values > 1
+#'   open one reader per thread, each seeking to its assigned point range.
+#'   Only effective for single-file reads with no filter and no waveform/extra-byte
+#'   attributes selected. Default \code{1L}.
 #' @return A \code{data.table}
 #' @export
 #' @examples
@@ -87,7 +91,7 @@
 #' lasdata <- read.las(lasfile, select = "xyzia")
 #' lasdata <- read.las(lasfile, progress = FALSE)
 #' @useDynLib rlas, .registration = TRUE
-read.las = function(files, select = "*", filter = "", transform = "", progress = TRUE)
+read.las = function(files, select = "*", filter = "", transform = "", progress = TRUE, nthreads = 1L)
 {
     if (filter == "-h" | filter == "-help")
       lasfilterusage()
@@ -99,7 +103,7 @@ read.las = function(files, select = "*", filter = "", transform = "", progress =
       return(invisible())
 
   filter = paste(filter, transform)
-  stream.las(files, select = select, filter = filter, progress = progress)
+  stream.las(files, select = select, filter = filter, progress = progress, nthreads = nthreads)
 }
 
 #' Read header from a .las or .laz file
@@ -134,7 +138,7 @@ read.lasheader = function(file)
 #' @param ifiles,ofile characters. Streaming operations.
 #' @param polygons list. Internal use only.
 #' @export
-read_and_write.las = function(ifiles, ofile = "", select = "*", filter = "", polygons = list(), progress = TRUE)
+read_and_write.las = function(ifiles, ofile = "", select = "*", filter = "", polygons = list(), progress = TRUE, nthreads = 1L)
 {
   stream    <- ofile != ""
   ifiles    <- enc2native(normalizePath(ifiles))
@@ -147,7 +151,25 @@ read_and_write.las = function(ifiles, ofile = "", select = "*", filter = "", pol
 
   check_filter(filter)
 
-  raw_list <- C_reader(ifiles, ofile, select, filter, polygons, progress)
+  # Use parallel reader when conditions allow: single file, no filter, no polygon
+  # filter, reading to R (not streaming to file), and no waveform or extra-byte
+  # attributes explicitly requested.
+  sel_check  <- if (select == "*") "" else select
+  use_parallel <- nthreads > 1L &&
+    length(ifiles) == 1L &&
+    !stream &&
+    filter == "" &&
+    length(polygons) == 0L &&
+    !grepl("[W0-9]", sel_check)
+
+  if (use_parallel)
+  {
+    raw_list <- C_reader_parallel(ifiles, select, as.integer(nthreads))
+  }
+  else
+  {
+    raw_list <- C_reader(ifiles, ofile, select, filter, polygons, progress)
+  }
 
   data <- raw_list[1:3]
   data.table::setDT(data)

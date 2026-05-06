@@ -14,6 +14,14 @@
   in the point data) caused a crash. This inconsistency, produced by
   some versions of `las2las`, now triggers a warning and extra bytes are
   silently ignored instead of dereferencing a NULL pointer.
+- Performance: unfiltered single-file reads now accept `nthreads > 1`
+  in `read.las()`. Each thread opens its own LASreader, seeks to its
+  assigned point range, and writes directly into pre-allocated R memory,
+  giving near-linear speedup on multi-core machines for large LAS/LAZ
+  files. Waveform and extra-byte attributes fall back to single-threaded.
+- Performance: unfiltered reads no longer copy point data at the
+  C++→R boundary. Attribute arrays are now pre-allocated as R vectors
+  and filled in-place, reducing peak memory by ~50% for large files.
 
 ### rlas v1.8.5
 

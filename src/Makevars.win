@@ -51,6 +51,7 @@ SOURCES = LASlib/lasreader_txt.cpp \
 					LASzip/lasmessage.cpp \
 					LASzip/mydefs.cpp \
 					./altrep_compact_replication.cpp \
+					./rlasparallel.cpp \
 					./rlasstreamer.cpp \
 					./rlasextrabytesattributes.cpp \
 					./readLAS.cpp \

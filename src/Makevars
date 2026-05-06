@@ -1,4 +1,5 @@
 PKG_CPPFLAGS = -DNDEBUG -DUNORDERED -DHAVE_UNORDERED_MAP -I./ -I./LASlib/ -I./LASzip/
+PKG_LIBS = -pthread
 
 SOURCES = LASlib/lasreader_txt.cpp \
 					LASlib/fopen_compressed.cpp \
@@ -51,6 +52,7 @@ SOURCES = LASlib/lasreader_txt.cpp \
 					LASzip/lasmessage.cpp \
 					LASzip/mydefs.cpp \
 					./altrep_compact_replication.cpp \
+					./rlasparallel.cpp \
 					./rlasstreamer.cpp \
 					./rlasextrabytesattributes.cpp \
 					./readLAS.cpp \
