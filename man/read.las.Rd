@@ -5,14 +5,23 @@
 \alias{read_and_write.las}
 \title{Read data from a .las or .laz file}
 \usage{
-read.las(files, select = "*", filter = "", transform = "")
+read.las(
+  files,
+  select = "*",
+  filter = "",
+  transform = "",
+  progress = TRUE,
+  nthreads = 1L
+)
 
 read_and_write.las(
   ifiles,
   ofile = "",
   select = "*",
   filter = "",
-  polygons = list()
+  polygons = list(),
+  progress = TRUE,
+  nthreads = 1L
 )
 }
 \arguments{
@@ -23,6 +32,15 @@ read_and_write.las(
 \item{filter}{character. streaming filters - filter data while reading the file (see details)}
 
 \item{transform}{character. streaming transformation - transform data while reading the file (see details)}
+
+\item{progress}{logical. Display a progress bar for large files. The bar only
+appears after the read has been running for more than 2 seconds, so small
+files are unaffected regardless of this setting. Default \code{TRUE}.}
+
+\item{nthreads}{integer. Number of threads for parallel reading. Values > 1
+open one reader per thread, each seeking to its assigned point range.
+Only effective for single-file reads with no filter and no waveform/extra-byte
+attributes selected. Default \code{1L}.}
 
 \item{ifiles, ofile}{characters. Streaming operations.}
 
@@ -81,4 +99,5 @@ lasdata <- read.las(lasfile)
 lasdata <- read.las(lasfile, filter = "-keep_first")
 lasdata <- read.las(lasfile, filter = "-drop_intensity_below 80")
 lasdata <- read.las(lasfile, select = "xyzia")
+lasdata <- read.las(lasfile, progress = FALSE)
 }
