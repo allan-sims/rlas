@@ -171,7 +171,7 @@ List C_reader_parallel(CharacterVector ifiles, CharacterVector select_cv, int nt
     NumericVector Xv(n), Yv(n), Zv(n);
     NumericVector Tv;
     IntegerVector Iv, RNv, NoRv, SDFv, EoFv, Cv;
-    IntegerVector Synv, Keyv, Withv, Ovlv;
+    LogicalVector Synv, Keyv, Withv, Ovlv;
     NumericVector SAv; IntegerVector SARv;
     IntegerVector UDv, PSIv;
     IntegerVector Rv, Gv, Bv, NIRv, Chanv;
@@ -183,10 +183,10 @@ List C_reader_parallel(CharacterVector ifiles, CharacterVector select_cv, int nt
     if (opts.d)   SDFv = IntegerVector(n);
     if (opts.e)   EoFv = IntegerVector(n);
     if (opts.c)   Cv   = IntegerVector(n);
-    if (opts.s)   Synv = IntegerVector(n);
-    if (opts.k)   Keyv = IntegerVector(n);
-    if (opts.w)   Withv = IntegerVector(n);
-    if (opts.o)   Ovlv  = IntegerVector(n);
+    if (opts.s)   Synv  = LogicalVector(n);
+    if (opts.k)   Keyv  = LogicalVector(n);
+    if (opts.w)   Withv = LogicalVector(n);
+    if (opts.o)   Ovlv  = LogicalVector(n);
     if (opts.a) { if (opts.extended) SAv = NumericVector(n); else SARv = IntegerVector(n); }
     if (opts.u)   UDv  = IntegerVector(n);
     if (opts.p)   PSIv = IntegerVector(n);
@@ -203,10 +203,10 @@ List C_reader_parallel(CharacterVector ifiles, CharacterVector select_cv, int nt
     if (opts.d)   out.SDF = INTEGER(SDFv);
     if (opts.e)   out.EoF = INTEGER(EoFv);
     if (opts.c)   out.C   = INTEGER(Cv);
-    if (opts.s)   out.Synthetic = INTEGER(Synv);
-    if (opts.k)   out.Keypoint  = INTEGER(Keyv);
-    if (opts.w)   out.Withheld  = INTEGER(Withv);
-    if (opts.o)   out.Overlap   = INTEGER(Ovlv);
+    if (opts.s)   out.Synthetic = LOGICAL(Synv);
+    if (opts.k)   out.Keypoint  = LOGICAL(Keyv);
+    if (opts.w)   out.Withheld  = LOGICAL(Withv);
+    if (opts.o)   out.Overlap   = LOGICAL(Ovlv);
     if (opts.a) { if (opts.extended) out.SA = REAL(SAv); else out.SAR = INTEGER(SARv); }
     if (opts.u)   out.UD  = INTEGER(UDv);
     if (opts.p)   out.PSI = INTEGER(PSIv);
