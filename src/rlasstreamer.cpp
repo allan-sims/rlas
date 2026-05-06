@@ -271,17 +271,47 @@ void RLASstreamer::initialize()
   return;
 }
 
-void RLASstreamer::allocation()
+void RLASstreamer::allocation(bool has_polygon_filter)
 {
+  // Unfiltered reads with no polygon filter allow direct indexed writes into
+  // pre-allocated R vectors, eliminating the wrap() copy at terminate().
+  direct_write = inR && !useFilter && !has_polygon_filter;
+  write_idx = 0;
+
   // Allocate the required amount of data for activated options
   if(inR)
   {
-    // Allocate the required amount of data for mandatory variables
-    X.reserve(nalloc);
-    Y.reserve(nalloc);
-    Z.reserve(nalloc);
-    if(t) T.reserve(nalloc);
-    if(i) I.reserve(nalloc);
+    if (direct_write)
+    {
+      // Pre-allocate R memory directly; threads can write to non-overlapping
+      // index ranges without any intermediate C++ buffer.
+      Xr = Rcpp::NumericVector(nalloc);
+      Yr = Rcpp::NumericVector(nalloc);
+      Zr = Rcpp::NumericVector(nalloc);
+      if(t)   Tr = Rcpp::NumericVector(nalloc);
+      if(i)   Ir = Rcpp::IntegerVector(nalloc);
+      if(rgb) { Rr = Rcpp::IntegerVector(nalloc); Gr = Rcpp::IntegerVector(nalloc); Br = Rcpp::IntegerVector(nalloc); }
+      if(nir) NIRr     = Rcpp::IntegerVector(nalloc);
+      if(cha) Channelr = Rcpp::IntegerVector(nalloc);
+    }
+    else
+    {
+      X.reserve(nalloc);
+      Y.reserve(nalloc);
+      Z.reserve(nalloc);
+      if(t) T.reserve(nalloc);
+      if(i) I.reserve(nalloc);
+      if(rgb)
+      {
+        R.reserve(nalloc);
+        G.reserve(nalloc);
+        B.reserve(nalloc);
+      }
+      if(nir) NIR.reserve(nalloc);
+      if(cha) Channel.reserve(nalloc);
+    }
+
+    // SMART_POPULATOR attributes always start length-1 regardless of mode.
     if(r) RN.reserve(1);
     if(n) NoR.reserve(1);
     if(d) SDF.reserve(1);
@@ -293,14 +323,6 @@ void RLASstreamer::allocation()
     if(a) SA.reserve(1);
     if(u) UD.reserve(1);
     if(p) PSI.reserve(1);
-    if(rgb)
-    {
-      R.reserve(nalloc);
-      G.reserve(nalloc);
-      B.reserve(nalloc);
-    }
-    if(nir) NIR.reserve(nalloc);
-    if(cha) Channel.reserve(nalloc);
     if(W)
     {
       wavePacketIndex.reserve(nalloc);
@@ -462,7 +484,7 @@ void RLASstreamer::write_point()
     // vectors will be ALTREPed.
     // At the beginning the guess is that the following attributes are not populated which is very
     // often true for SDF, EoF, Synthetic, Keypoint, Withheld, UD and PSI
-    if (X.size() == 0)
+    if (write_idx == 0)
     {
       SDF.push_back(lasreader->point.get_scan_direction_flag());
       EoF.push_back(lasreader->point.get_edge_of_flight_line());
@@ -489,8 +511,8 @@ void RLASstreamer::write_point()
     if (!is_##name##_populated && lasreader->point.lasname() != name[0])  \
     {                                                                     \
       is_##name##_populated = true;                                       \
-      name.reserve(X.capacity());                                         \
-      name.insert(name.end(), X.size()-2, name[0]);                       \
+      name.reserve(nalloc);                                               \
+      name.insert(name.end(), write_idx-2, name[0]);                      \
     }                                                                     \
                                                                           \
     if (is_##name##_populated)                                            \
@@ -505,20 +527,31 @@ void RLASstreamer::write_point()
     if (!is_##name##_populated && lasreader->point.lasname() != name[0])  \
     {                                                                     \
       is_##name##_populated = true;                                       \
-      name.reserve(X.capacity());                                         \
-      name.insert(name.end(), X.size()-2, (bool) name[0]);                \
+      name.reserve(nalloc);                                               \
+      name.insert(name.end(), write_idx-2, (bool) name[0]);               \
     }                                                                     \
                                                                           \
     if (is_##name##_populated)                                            \
       name.push_back(lasreader->point.lasname());                         \
   }
 
-    X.push_back(lasreader->point.get_x());
-    Y.push_back(lasreader->point.get_y());
-    Z.push_back(lasreader->point.get_z());
-
-    if (t) T.push_back(lasreader->point.get_gps_time());
-    if (i) I.push_back(lasreader->point.get_intensity());
+    if (direct_write)
+    {
+      Xr[write_idx] = lasreader->point.get_x();
+      Yr[write_idx] = lasreader->point.get_y();
+      Zr[write_idx] = lasreader->point.get_z();
+      if (t) Tr[write_idx] = lasreader->point.get_gps_time();
+      if (i) Ir[write_idx] = lasreader->point.get_intensity();
+    }
+    else
+    {
+      X.push_back(lasreader->point.get_x());
+      Y.push_back(lasreader->point.get_y());
+      Z.push_back(lasreader->point.get_z());
+      if (t) T.push_back(lasreader->point.get_gps_time());
+      if (i) I.push_back(lasreader->point.get_intensity());
+    }
+    write_idx++;
 
     if (r && !extended) {
       SMART_POPULATOR(RN, get_return_number)
@@ -542,7 +575,10 @@ void RLASstreamer::write_point()
     }
 
     if (cha && extended)
-      Channel.push_back(lasreader->point.get_extended_scanner_channel());
+    {
+      if (direct_write) Channelr[write_idx-1] = lasreader->point.get_extended_scanner_channel();
+      else              Channel.push_back(lasreader->point.get_extended_scanner_channel());
+    }
 
     if (s) { SMART_POPULATOR_BOOL(Synthetic, get_synthetic_flag) }
     if (k) { SMART_POPULATOR_BOOL(Keypoint, get_keypoint_flag) }
@@ -560,11 +596,24 @@ void RLASstreamer::write_point()
 
     if (rgb)
     {
-      R.push_back(lasreader->point.get_R());
-      G.push_back(lasreader->point.get_G());
-      B.push_back(lasreader->point.get_B());
+      if (direct_write)
+      {
+        Rr[write_idx-1] = lasreader->point.get_R();
+        Gr[write_idx-1] = lasreader->point.get_G();
+        Br[write_idx-1] = lasreader->point.get_B();
+      }
+      else
+      {
+        R.push_back(lasreader->point.get_R());
+        G.push_back(lasreader->point.get_G());
+        B.push_back(lasreader->point.get_B());
+      }
     }
-    if (nir) NIR.push_back(lasreader->point.get_NIR());
+    if (nir)
+    {
+      if (direct_write) NIRr[write_idx-1] = lasreader->point.get_NIR();
+      else              NIR.push_back(lasreader->point.get_NIR());
+    }
 
     if (W) write_waveform();
 
@@ -629,33 +678,52 @@ List RLASstreamer::terminate()
     laswaveform13reader = 0;
     ended = true;
 
-    List lasdata = List::create(X,Y,Z);
-    X.clear();
-    X.shrink_to_fit();
-    Y.clear();
-    Y.shrink_to_fit();
-    Z.clear();
-    Z.shrink_to_fit();
-
+    List lasdata;
     CharacterVector attr_name(0);
     attr_name.push_back("X");
     attr_name.push_back("Y");
     attr_name.push_back("Z");
 
-    if(t)
+    if (direct_write)
     {
-      lasdata.push_back(T);
-      attr_name.push_back("gpstime");
-      T.clear();
-      T.shrink_to_fit();
+      // Truncate only on malformed files where actual point count < header count.
+      if (write_idx < nalloc)
+      {
+        Xr = Xr[Rcpp::Range(0, write_idx-1)];
+        Yr = Yr[Rcpp::Range(0, write_idx-1)];
+        Zr = Zr[Rcpp::Range(0, write_idx-1)];
+        if(t) Tr = Tr[Rcpp::Range(0, write_idx-1)];
+        if(i) Ir = Ir[Rcpp::Range(0, write_idx-1)];
+        if(rgb) { Rr = Rr[Rcpp::Range(0, write_idx-1)]; Gr = Gr[Rcpp::Range(0, write_idx-1)]; Br = Br[Rcpp::Range(0, write_idx-1)]; }
+        if(nir) NIRr     = NIRr[Rcpp::Range(0, write_idx-1)];
+        if(cha) Channelr = Channelr[Rcpp::Range(0, write_idx-1)];
+      }
+      lasdata = List::create(Xr, Yr, Zr);
+      if(t) { lasdata.push_back(Tr); attr_name.push_back("gpstime"); }
+      if(i) { lasdata.push_back(Ir); attr_name.push_back("Intensity"); }
     }
-
-    if(i)
+    else
     {
-      lasdata.push_back(I);
-      attr_name.push_back("Intensity");
-      I.clear();
-      I.shrink_to_fit();
+      lasdata = List::create(X,Y,Z);
+      X.clear(); X.shrink_to_fit();
+      Y.clear(); Y.shrink_to_fit();
+      Z.clear(); Z.shrink_to_fit();
+
+      if(t)
+      {
+        lasdata.push_back(T);
+        attr_name.push_back("gpstime");
+        T.clear();
+        T.shrink_to_fit();
+      }
+
+      if(i)
+      {
+        lasdata.push_back(I);
+        attr_name.push_back("Intensity");
+        I.clear();
+        I.shrink_to_fit();
+      }
     }
 
     if(r)
@@ -700,10 +768,9 @@ List RLASstreamer::terminate()
 
     if(cha)
     {
-      lasdata.push_back(Channel);
+      if (direct_write) { lasdata.push_back(Channelr); }
+      else { lasdata.push_back(Channel); Channel.clear(); Channel.shrink_to_fit(); }
       attr_name.push_back("ScannerChannel");
-      Channel.clear();
-      Channel.shrink_to_fit();
     }
 
     if(s)
@@ -774,28 +841,25 @@ List RLASstreamer::terminate()
 
     if(rgb)
     {
-      lasdata.push_back(R);
-      attr_name.push_back("R");
-      R.clear();
-      R.shrink_to_fit();
-
-      lasdata.push_back(G);
-      attr_name.push_back("G");
-      G.clear();
-      G.shrink_to_fit();
-
-      lasdata.push_back(B);
-      attr_name.push_back("B");
-      B.clear();
-      B.shrink_to_fit();
+      if (direct_write)
+      {
+        lasdata.push_back(Rr); attr_name.push_back("R");
+        lasdata.push_back(Gr); attr_name.push_back("G");
+        lasdata.push_back(Br); attr_name.push_back("B");
+      }
+      else
+      {
+        lasdata.push_back(R); attr_name.push_back("R"); R.clear(); R.shrink_to_fit();
+        lasdata.push_back(G); attr_name.push_back("G"); G.clear(); G.shrink_to_fit();
+        lasdata.push_back(B); attr_name.push_back("B"); B.clear(); B.shrink_to_fit();
+      }
     }
 
     if(nir)
     {
-      lasdata.push_back(NIR);
+      if (direct_write) { lasdata.push_back(NIRr); }
+      else { lasdata.push_back(NIR); NIR.clear(); NIR.shrink_to_fit(); }
       attr_name.push_back("NIR");
-      NIR.clear();
-      NIR.shrink_to_fit();
     }
 
     if (W)
@@ -900,6 +964,8 @@ void RLASstreamer::initialize_bool()
   initialized = false;
   ended = false;
   extended = false;
+  direct_write = false;
+  write_idx = 0;
   lasreader = 0;
   laswriter = 0;
   laswaveform13reader = 0;

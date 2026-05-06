@@ -78,7 +78,7 @@ List C_reader(CharacterVector ifiles, CharacterVector ofile, CharacterVector sel
 {
   RLASstreamer streamer(ifiles, ofile, filter);
   streamer.select(select);
-  streamer.allocation();
+  streamer.allocation(polygons.size() > 0);
 
   auto start = std::chrono::steady_clock::now();
   int counter = 0;

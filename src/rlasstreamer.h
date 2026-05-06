@@ -19,7 +19,7 @@ class RLASstreamer
     void setoutputfile(CharacterVector);
     void setfilter(CharacterVector);
     void select(CharacterVector);
-    void allocation();
+    void allocation(bool has_polygon_filter = false);
     bool read_point();
     void write_point();
     LASpoint* point();
@@ -76,6 +76,19 @@ class RLASstreamer
     std::vector<unsigned short> G;
     std::vector<unsigned short> B;
     std::vector<unsigned short> NIR;
+
+    // Pre-allocated R vectors for zero-copy unfiltered reads (direct_write mode).
+    // In this mode each attribute is written by index rather than push_back, so
+    // terminate() can include them in the result list without a wrap() copy.
+    Rcpp::NumericVector Xr, Yr, Zr;
+    Rcpp::NumericVector Tr;
+    Rcpp::IntegerVector Ir;
+    Rcpp::IntegerVector Rr, Gr, Br;
+    Rcpp::IntegerVector NIRr;
+    Rcpp::IntegerVector Channelr;
+
+    bool direct_write;  // true when unfiltered and no polygon filter
+    int  write_idx;     // current write position; replaces X.size() as sentinel
 
     std::vector<int> wavePacketIndex;
     std::vector<U64> wavePacketOffset;
