@@ -7,9 +7,14 @@
  */
 #include <Rcpp.h>
 #include <thread>
+#include <mutex>
 #include <vector>
 #include <string>
 #include "lasreader.hpp"
+
+// LASlib's open() path has global state (message callback, static buffers).
+// Serialize it across threads; the actual point-reading loop is fully parallel.
+static std::mutex s_open_mutex;
 
 using namespace Rcpp;
 
@@ -43,7 +48,11 @@ static void parallel_worker(const std::string& filename,
         LASreadOpener opener;
         opener.set_file_name(filename.c_str());
         opener.set_populate_header(true);
-        LASreader* reader = opener.open();
+        LASreader* reader;
+        {
+            std::lock_guard<std::mutex> lk(s_open_mutex);
+            reader = opener.open();
+        }
 
         if (!reader) { err_out = "Could not open file"; return; }
 

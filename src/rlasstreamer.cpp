@@ -74,7 +74,11 @@ void RLASstreamer::setfilter(CharacterVector filter)
 
   std::string filterstd  = as<std::string>(filter);
 
-  if (filterstd == "")
+  // Trim leading/trailing whitespace — paste("", "") in R produces " ", not ""
+  filterstd.erase(0, filterstd.find_first_not_of(" \t\r\n"));
+  filterstd.erase(filterstd.find_last_not_of(" \t\r\n") + 1);
+
+  if (filterstd.empty())
     return;
 
   char* filterchar = const_cast<char*>(filterstd.c_str());
@@ -230,7 +234,12 @@ void RLASstreamer::initialize()
     format   = get_format(point_type);
     extended = (lasreader->header.version_minor >= 4) && (format >= 6);
 
-    int npoints = lasreader->header.number_of_point_records;
+    // LAS 1.4 files may write number_of_point_records=0 with the real count
+    // in extended_number_of_point_records. Use lasreader->npoints which LASlib
+    // has already resolved from whichever field is authoritative.
+    I64 npoints64 = lasreader->npoints;
+    if (npoints64 == 0)
+      npoints64 = (I64)lasreader->header.number_of_point_records;
 
     bool has_rgb = (format == 2 || format == 3 || format == 5 || format == 7 || format == 8 || format == 10);
     bool has_t   = (format == 1 || format >= 3);
@@ -243,9 +252,9 @@ void RLASstreamer::initialize()
     cha = cha && extended;
 
     if (useFilter)
-      nalloc = ceil((float)npoints/8);
+      nalloc = (int)ceil((float)npoints64/8);
     else
-      nalloc = npoints;
+      nalloc = (int)npoints64;
   }
 
   is_RN_populated = false;

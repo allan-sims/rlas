@@ -102,7 +102,7 @@ read.las = function(files, select = "*", filter = "", transform = "", progress =
     if (filter == "-h" | transform == "-h" | filter == "-help" | transform == "-help")
       return(invisible())
 
-  filter = paste(filter, transform)
+  filter = trimws(paste(filter, transform))
   stream.las(files, select = select, filter = filter, progress = progress, nthreads = nthreads)
 }
 
@@ -158,7 +158,7 @@ read_and_write.las = function(ifiles, ofile = "", select = "*", filter = "", pol
   use_parallel <- nthreads > 1L &&
     length(ifiles) == 1L &&
     !stream &&
-    filter == "" &&
+    !nzchar(trimws(filter)) &&
     length(polygons) == 0L &&
     !grepl("[W0-9]", sel_check)
 
